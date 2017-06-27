@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.cjn.dao.ItemMapper" >
+
+  <!--结果集-->
+  <resultMap id="BaseResultMap" type="com.cjn.entity.Item" >
+    <result column="ID" property="id" jdbcType="DECIMAL" />
+    <result column="TITLE" property="title" jdbcType="VARCHAR" />
+    <result column="SELL_POINT" property="sellPoint" jdbcType="VARCHAR" />
+    <result column="PRICE" property="price" jdbcType="DECIMAL" />
+    <result column="NUM" property="num" jdbcType="DECIMAL" />
+    <result column="BARCODE" property="barcode" jdbcType="VARCHAR" />
+    <result column="IMAGE" property="image" jdbcType="VARCHAR" />
+    <result column="CID" property="cid" jdbcType="DECIMAL" />
+    <result column="STATUS" property="status" jdbcType="DECIMAL" />
+    <result column="CREATED" property="created" jdbcType="TIMESTAMP" />
+    <result column="UPDATED" property="updated" jdbcType="TIMESTAMP" />
+  </resultMap>
+
+  <!--字段sql代码块-->
+  <sql id="Base_Column_List" >
+    ID, TITLE, SELL_POINT, PRICE, NUM, BARCODE, IMAGE, STATUS,CREATED ,UPDATED ,CID
+  </sql>
+
+  <!--返回结果集-->
+  <resultMap id="itemListMap" type="com.cjn.entity.Item" extends="BaseResultMap">
+    <association property="itemCat" javaType="com.cjn.entity.ItemCat">
+      <id column="ic_id" property="id" jdbcType="DECIMAL"/>
+      <result column="ic_name" property="name" jdbcType="VARCHAR" />
+    </association>
+  </resultMap>
+
+  <!--条件查询 结果集-->
+  <resultMap id="ItemToCat" type="com.cjn.entity.Item" >
+    <id column="zid" property="id" jdbcType="DECIMAL" />
+    <result column="ztitle" property="title" jdbcType="VARCHAR" />
+    <result column="zSELLPOINT" property="sellPoint" jdbcType="VARCHAR" />
+    <result column="zPRICE" property="price" jdbcType="DECIMAL" />
+    <result column="zNUM" property="num" jdbcType="DECIMAL" />
+    <result column="zBARCODE" property="barcode" jdbcType="VARCHAR" />
+    <result column="zIMAGE" property="image" jdbcType="VARCHAR" />
+    <result column="zCID" property="cid" jdbcType="DECIMAL" />
+    <result column="zSTATUS" property="status" jdbcType="DECIMAL" />
+    <result column="zCREATED" property="created" jdbcType="TIMESTAMP" />
+    <result column="zUPDATED" property="updated" jdbcType="TIMESTAMP" />
+
+    <association property="itemCat" javaType="com.cjn.entity.ItemCat">
+      <result column="tid" property="id" jdbcType="DECIMAL"></result>
+      <result column="tname" property="name" jdbcType="VARCHAR"></result>
+    </association>
+  </resultMap>
+
+  <!--where条件 sql代码块-->
+  <sql id="where_sql">
+    <trim prefix="where" prefixOverrides="and">
+      <if test="whereMap != null &amp;&amp; whereMap.title != null and whereMap.title != ''">
+        AND t1.title LIKE '%${whereMap.title}%'
+      </if>
+
+
+
+      <!--status 等于3代表该商品已经被删除,不能被查询出来-->
+        AND t1.status != 3
+    </trim>
+  </sql>
+
+  <!--条件查询 sql代码块-->
+  <sql id="columnList" >
+    z.id as zid, z.TITLE as ztitle, z.SELL_POINT as zsellpoint,
+    z.PRICE as zprice, z.NUM as znum, z.BARCODE as zbarcode,
+    z.IMAGE as zimage,z.STATUS as zstatus,z.CREATED as zcreated,
+    z.UPDATED as zupdated,z.CID as zcid,t.id as tid,t.name as tname
+  </sql>
+
+  <!--逻辑批量删除  根据ID集合-->
+  <update id="deleteLogicItemMatch" parameterType="java.util.ArrayList">
+    BEGIN
+    <foreach collection="list" item="item" separator=";">
+      update GB_ITEM STATUS set STATUS = 3 where id = #{item}
+    </foreach>
+    ;END ;
+  </update>
+
+  <!--逻辑删除 根据ID-->
+  <update id="deleteLogicItem" parameterType="com.cjn.entity.Item">
+    update GB_ITEM STATUS set STATUS = 3 where id = #{id}
+  </update>
+  
+  <!--根据条件查询商品列表-->
+  <select id="selectItemWhere" resultMap="ItemToCat" parameterType="com.cjn.entity.Item">
+    SELECT <include refid="columnList" />
+    FROM GB_ITEM z LEFT JOIN GB_ITEM_CAT t
+    ON z.cid = t.id
+    <where>
+      <trim prefixOverrides="and">
+        <if test="null != title and '' != title">
+          AND z.title LIKE '%${title}%'
+        </if>
+        <if test="null != cid and '' != cid">
+          and z.cid = #{cid}
+        </if>
+      </trim>
+    </where>
+    ORDER BY z.id ${order}
+  </select>
+
+  <!--根据ID单个删除-->
+  <delete id="deleteById" parameterType="com.cjn.entity.Item">
+    DELETE FROM GB_ITEM
+    WHERE id = #{id}
+  </delete>
+
+  <!--根据ID集合 批量删除-->
+  <delete id="deleteItemMatch" parameterType="java.util.ArrayList">
+    DELETE FROM GB_ITEM
+    WHERE id IN 
+    <foreach collection="list" open="(" close=")" index="i" item="n" separator=",">
+      #{n}
+    </foreach>
+  </delete>
+
+  <!--根据主键修改-->
+  <update id="updateByPrimaryKey" parameterType="com.cjn.entity.Item" >
+    update GB_ITEM
+    set title = #{title,jdbcType=VARCHAR},
+    sell_Point = #{sellPoint,jdbcType=VARCHAR},
+    PRICE =  #{price,jdbcType=DECIMAL},
+    CREATED = #{created,jdbcType=TIMESTAMP},
+    num =  #{num,jdbcType=DECIMAL},
+    barcode = #{barcode,jdbcType=VARCHAR},
+    cid=#{cid,jdbcType=DECIMAL},
+    status=#{status,jdbcType=DECIMAL},
+    updated=#{updated,jdbcType=TIMESTAMP},
+    image = #{image,jdbcType=VARCHAR}
+    where ID = #{id,jdbcType=DECIMAL}
+  </update>
+
+  <!--分页+条件 查询userList-->
+  <select id="selectItemList" resultMap="itemListMap" parameterType="com.cjn.util.PageUtil">
+    select tt.* from (
+    select t.*,rownum rn from
+    (
+    SELECT t1.id as id , t1.title as title , t1.sell_Point as sell_point,t1.price as price,
+    t1.num num ,t1.barcode barcode ,t1.image image,t1.status status,t1.created created,
+    t1.updated updated,t1.cid cid,t2.id ic_id,t2.name ic_name
+    FROM GB_ITEM t1 LEFT JOIN GB_ITEM_CAT t2
+    ON t1.cid = t2.id
+    <include refid="where_sql"/>
+    <!-- 排序-->
+    ORDER  BY t1.${sort} ${order}
+    ) t
+    where rownum &lt;= #{end}
+    ) tt where rn &gt; #{start}
+  </select>
+
+  <!--查询总条数-->
+  <select id="selectItemListCount" resultType="Integer" parameterType="com.cjn.util.PageUtil">
+    SELECT COUNT (t1.id)
+    FROM GB_ITEM t1 LEFT JOIN GB_ITEM_CAT t2
+    ON t1.cid = t2.id
+    <include refid="where_sql"></include>
+  </select>
+
+  <!--新增-->
+  <insert id="insert" parameterType="com.cjn.entity.Item" >
+    insert into GB_ITEM (ID, TITLE, SELL_POINT, 
+      PRICE, NUM, BARCODE, 
+      IMAGE, CID, STATUS, 
+      CREATED, UPDATED)
+    values (#{id,jdbcType=DECIMAL}, #{title,jdbcType=VARCHAR}, #{sellPoint,jdbcType=VARCHAR}, 
+      #{price,jdbcType=DECIMAL}, #{num,jdbcType=DECIMAL}, #{barcode,jdbcType=VARCHAR}, 
+      #{image,jdbcType=VARCHAR}, #{cid,jdbcType=DECIMAL}, #{status,jdbcType=DECIMAL}, 
+      #{created,jdbcType=TIMESTAMP}, #{updated,jdbcType=TIMESTAMP})
+  </insert>
+
+  <!--新增商品-->
+  <insert id="insertSelective" parameterType="com.cjn.entity.Item" >
+    <selectKey keyColumn="id" keyProperty="id" resultType="java.math.BigDecimal" order="BEFORE">
+      select seq_item_id.nextval as id from dual
+    </selectKey>
+    insert into GB_ITEM
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        ID,
+      </if>
+      <if test="title != null" >
+        TITLE,
+      </if>
+      <if test="sellPoint != null" >
+        SELL_POINT,
+      </if>
+      <if test="price != null" >
+        PRICE,
+      </if>
+      <if test="num != null" >
+        NUM,
+      </if>
+      <if test="barcode != null" >
+        BARCODE,
+      </if>
+      <if test="image != null" >
+        IMAGE,
+      </if>
+      <if test="cid != null" >
+        CID,
+      </if>
+      <if test="status != null" >
+        STATUS,
+      </if>
+      <if test="created != null" >
+        CREATED,
+      </if>
+      <if test="updated != null" >
+        UPDATED,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=DECIMAL},
+      </if>
+      <if test="title != null" >
+        #{title,jdbcType=VARCHAR},
+      </if>
+      <if test="sellPoint != null" >
+        #{sellPoint,jdbcType=VARCHAR},
+      </if>
+      <if test="price != null" >
+        #{price,jdbcType=DECIMAL},
+      </if>
+      <if test="num != null" >
+        #{num,jdbcType=DECIMAL},
+      </if>
+      <if test="barcode != null" >
+        #{barcode,jdbcType=VARCHAR},
+      </if>
+      <if test="image != null" >
+        #{image,jdbcType=VARCHAR},
+      </if>
+      <if test="cid != null" >
+        #{cid,jdbcType=DECIMAL},
+      </if>
+      <if test="status != null" >
+        #{status,jdbcType=DECIMAL},
+      </if>
+      <if test="created != null" >
+        #{created,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updated != null" >
+        #{updated,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+</mapper>
